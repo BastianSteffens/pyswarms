@@ -1,7 +1,61 @@
 # -*- coding: utf-8 -*-
 
-# https://ieeexplore.ieee.org/abstract/document/1304847
-# https://www.sciencedirect.com/science/article/pii/S1568494618303557
+r"""
+A Multiobjective Particle Swarm Optimisation algorithm.
+
+It takes a set of candidate solutions, and tries to find 
+the Pareto front of solution using a position-velocity update method. 
+
+The position update can be defined as:
+
+.. math::
+
+   x_{i}(t+1) = x_{i}(t) + v_{i}(t+1)
+
+Where the position at the current timestep :math:`t` is updated using
+the computed velocity at :math:`t+1`. Furthermore, the velocity update
+is defined as:
+
+.. math::
+
+   v_{ij}(t + 1) = m * v_{ij}(t) + c_{1}r_{1j}(t)[y_{ij}(t) − x_{ij}(t)]
+                   + c_{2}r_{2j}(t)[\hat{y}_{j}(t) − x_{ij}(t)]
+
+Here, :math:`c1` and :math:`c2` are the cognitive and social parameters
+respectively. They control the particle's behavior given two choices: (1) to
+follow its *personal best* or (2) follow the swarm's *global best* position.
+Global best for this algorithm is surrogated, by randomly picking a solution
+from the Pareto front according to their fitness.
+Overall, this dictates if the swarm is explorative or exploitative in nature.
+In addition, a parameter :math:`w` controls the inertia of the swarm's
+movement.
+
+An example usage is as follows:
+
+.. code-block:: python
+
+    import pyswarms as ps
+    from pyswarms.utils.functions import single_obj as fx
+
+    # Set-up hyperparameters
+    options = {'c1': 0.5, 'c2': 0.3, 'w':0.9}
+
+    # Call instance of GlobalBestPSO
+    optimizer = ps.single.GlobalBestPSO(n_particles=10, dimensions=2,
+                                        options=options)
+
+    # Perform optimization
+    stats = optimizer.optimize(fx.sphere, iters=100)
+
+This algorithm was adapted from the work of C.A.C. Coello et al. in 
+Multiobjective Particle Swarm Optimization [ITEC2004]_.
+
+.. [ITEC2004] C. A. C. Coello, G. T. Pulido and M. S. Lechuga, 
+    "Handling multiple objectives with particle swarm optimization,"
+    IEEE Transactions on Evolutionary Computation, vol. 8, no. 3, 
+    pp. 256-279, June 2004.
+"""
+
 import logging
 import numpy as np
 from time import sleep
@@ -9,9 +63,8 @@ from time import sleep
 from ..base import SwarmOptimizer
 from ..utils import Reporter
 from ..backend.handlers import BoundaryHandler, VelocityHandler
-from ..backend.generators import create_swarm
+from ..backend.generators import create_multi_swarm
 from ..backend.operators import compute_velocity, compute_position
-from ..backend.multi_swarms import create_multi_swarm
 
 class MOPSO(SwarmOptimizer):
     def __init__(

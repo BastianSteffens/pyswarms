@@ -22,10 +22,12 @@ def is_dominant(left,right):
 
 class ParetoFront:
     def _init_grid(self):
+        """Initialises a hypercube grid and returns it"""
         return np.ndarray(shape=tuple([self.grid_size] * self.dimensions),dtype=np.ndarray)
     
     def _grid_insert(self, grid, grid_weight, item):
-        grid_position = self.objective_cell(item[1])
+        """Inserts the item into the grid and updates the grid total weight"""
+        grid_position = self.cost_cell(item[1])
         if(grid[grid_position] == None):
             grid[grid_position] = [item]
             grid_weight += self.grid_weight_coef
@@ -37,7 +39,10 @@ class ParetoFront:
         return grid, grid_weight
         
     
-    def __init__(self,options=None):
+    def __init__(self,options):
+        """
+        Constructor for Pareto front. All the options 
+        """
         self.dimensions = options['obj_dimensions']
         self.grid_size = options['grid_size']
         self.objective_bounds = options['obj_bounds']
@@ -45,15 +50,26 @@ class ParetoFront:
         self.grid_weight_coef = options['grid_weight_coef']
         self.grid_weight = 0
 
-    def objective_cell(self,objective):
+    def cost_cell(self,objective):
+        """Returns indices of a cell in the grid that corresponds to the given cost"""
         return tuple(np.array([min(self.grid_size-1,(x[0]/(x[1][1]-x[1][0])-x[1][0])*self.grid_size) for x in zip(objective,self.objective_bounds)], dtype=np.int))
         
     def insert_all(self,items):
+        """
+        Inserts multiple items into a Pareto front
+
+        Params
+        ------
+        item : list(tuple(tuple * param_dimensions, tuple * dimensions))
+            Positions and costs to insert
+        """
         for item in items:
             self.insert(item)
         
     def insert(self,item):
         """
+        Inserts an item to a Pareto front
+
         Params
         ------
         item : tuple(tuple * param_dimensions, tuple * dimensions)
@@ -73,6 +89,10 @@ class ParetoFront:
         self.grid, self.grid_weight = self._grid_insert(new_grid,new_grid_weight,item)
         
     def get_random_item(self):
+        """
+        Returns random item from a Pareto front, such that items from a Pareto front have chance of picking
+        according to the fitness of their cell 
+        """
         n = random.random() * self.grid_weight
         w = 0
         for index in np.ndindex(self.grid.shape):
@@ -86,13 +106,16 @@ class ParetoFront:
         return None
     
     def get_front(self):
+        """"Returns a Pareto front as a list"""
         flatten = lambda l: [item for sublist in l for item in sublist]
         return flatten([self.grid[index] for index in np.ndindex(self.grid.shape) if self.grid[index] != None])
     
     def get_best_cost(self):
+        """Returns the current best for each of the objective functions"""
         return self.aggregate(np.min)
 
     def aggregate(self, fun):
+        """Utility function, used for aggregation on a grid"""
         costs = list(list(zip(*self.get_front()))[1])
         return fun(list(zip(*costs)),axis=1)
                 
