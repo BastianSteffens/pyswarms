@@ -80,6 +80,53 @@ class MOPSO(SwarmOptimizer):
         ftol=-np.inf,
         init_pos=None,
     ):
+        """Initialize the swarm
+
+        Attributes
+        ----------
+        n_particles : int
+            number of particles in the swarm.
+        dimensions : int
+            number of dimensions in the space.
+        options : dict with keys :code:`{'c1', 'c2', 'w'}`
+            a dictionary containing the parameters for the specific
+            optimization technique.
+                * c1 : float
+                    cognitive parameter
+                * c2 : float
+                    social parameter
+                * w : float
+                    inertia parameter
+                * obj_bounds : list(float) of shape (2, obj_dimension)
+                    bounds of objective functions
+                * obj_dimensions : int
+                    number of objective functions to be used
+                * grid_size : int
+                    number of cells to be used in a grid per dimension
+                * grid_weight_coef : float
+                    coefficient to be used for weitghted random picking of solutions,
+                    must be >1
+        bounds : tuple of :code:`np.ndarray` (default is :code:`None`)
+            a tuple of size 2 where the first entry is the minimum bound
+            while the second entry is the maximum bound. Each array must
+            be of shape :code:`(dimensions,)`.
+        bh_strategy : String
+            a strategy for the handling of out-of-bounds particles.
+        velocity_clamp : tuple (default is :code:`None`)
+            a tuple of size 2 where the first entry is the minimum velocity
+            and the second entry is the maximum velocity. It
+            sets the limits for velocity clamping.
+        vh_strategy : String
+            a strategy for the handling of the velocity of out-of-bounds particles.
+        center : list (default is :code:`None`)
+            an array of size :code:`dimensions`
+        ftol : float
+            relative error in objective_func(best_pos) acceptable for
+            convergence
+        init_pos : :code:`numpy.ndarray` (default is :code:`None`)
+            option to explicitly set the particles' initial positions. Set to
+            :code:`None` if you wish to generate the particles randomly.
+        """
         super(MOPSO, self).__init__(
             n_particles=n_particles,
             dimensions=dimensions,
@@ -100,6 +147,28 @@ class MOPSO(SwarmOptimizer):
         self.name = __name__
         
     def optimize(self, objective_func, iters, fast=False, **kwargs):
+        """Optimize the swarm for a number of iterations
+
+        Performs the optimization to evaluate the objective
+        function :code:`f` for a number of iterations :code:`iter.`
+
+        Parameters
+        ----------
+        objective_func : function 
+            objective functions to be evaluated, must return a tuple of costs
+        iters : int
+            number of iterations
+        fast : bool (default is False)
+            if True, time.sleep is not executed
+        kwargs : dict
+            arguments for the objective function
+
+        Returns
+        -------
+        list(tuple)
+            the final pareto front, in a form of a list of tuples in a form of 
+            (position, costs)
+        """
         self.rep.log("Obj. func. args: {}".format(kwargs), lvl=logging.DEBUG)
         self.rep.log(
             "Optimize for {} iters with {}".format(iters, self.options),
@@ -120,22 +189,16 @@ class MOPSO(SwarmOptimizer):
             self.swarm.best_pos, self.swarm.best_cost = self.swarm.generate_global_best()
             # fmt: on
             self.rep.hook(best_cost=self.swarm.archive.get_best_cost(), mean_cost=self.swarm.archive.aggregate(np.mean))
-            # Save to history TODO
-#             hist = self.ToHistory(
-#                 best_cost=self.swarm.best_cost,
-#                 mean_pbest_cost=np.mean(self.swarm.pbest_cost),
-#                 mean_neighbor_cost=self.swarm.best_cost,
-#                 position=self.swarm.position,
-#                 velocity=self.swarm.velocity,
-#             )
-#             self._populate_history(hist)
-#             # Verify stop criteria based on the relative acceptable cost ftol
-#             relative_measure = self.ftol * (1 + np.abs(best_cost_yet_found))
-#             if (
-#                 np.abs(self.swarm.best_cost - best_cost_yet_found)
-#                 < relative_measure
-#             ):
-#                 break
+            # Save to history 
+            hist = self.ToHistory(
+                # TODO: best of the swarm
+                best_cost=self.swarm.best_cost,
+                mean_pbest_cost=np.mean(self.swarm.pbest_cost),
+                mean_neighbor_cost=self.swarm.best_cost,
+                position=self.swarm.position,
+                velocity=self.swarm.velocity,
+            )
+            self._populate_history(hist)
             # Perform velocity and position updates
             self.swarm.velocity = compute_velocity(
                 self.swarm, self.velocity_clamp, self.vh, self.bounds
